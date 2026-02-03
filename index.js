@@ -6,152 +6,171 @@ const {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  ChannelType,
-  PermissionsBitField
+  PermissionsBitField,
+  ChannelType
 } = require("discord.js");
+
+/* ======================
+   CLIENT
+====================== */
 
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildMessages
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent
   ],
-  partials: [Partials.Channel]
+  partials: [
+    Partials.Channel,
+    Partials.Message,
+    Partials.User,
+    Partials.GuildMember
+  ]
 });
 
-/* ================= CONFIG ================= */
+/* ======================
+   READY
+====================== */
 
-// ⚠️ REQUIRED
-const TICKET_PANEL_CHANNEL_ID = "1468307494785912862";
-const STAFF_ROLE_ID = "1468307062747435019";
-
-// Optional
-const TICKET_CATEGORY_NAME = "Tickets";
-
-/* ========================================== */
-
-client.once("ready", async () => {
+client.once("ready", () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
-
-  const channel = await client.channels.fetch(TICKET_PANEL_CHANNEL_ID);
-
-  const embed = new EmbedBuilder()
-    .setTitle("🎫 Support Tickets")
-    .setDescription(
-      "**Need help? You’re in the right place.**\n\n" +
-      "Click the button below to open a private ticket.\n\n" +
-      "• One issue per ticket\n" +
-      "• Be respectful\n" +
-      "• Do NOT ping staff\n\n" +
-      "Our staff will assist you shortly 💙"
-    )
-    .setColor(0x3498db)
-    .setFooter({ text: "Ticket System" });
-
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId("create_ticket")
-      .setLabel("🎟 Create Ticket")
-      .setStyle(ButtonStyle.Primary)
-  );
-
-  await channel.send({ embeds: [embed], components: [row] });
 });
 
-/* ================= BUTTON HANDLER ================= */
+/* ======================
+   PREFIX COMMANDS
+====================== */
+
+const PREFIX = "!";
+
+client.on("messageCreate", async (message) => {
+  if (message.author.bot || !message.guild) return;
+  if (!message.content.startsWith(PREFIX)) return;
+
+  const command = message.content
+    .slice(PREFIX.length)
+    .trim()
+    .toLowerCase();
+
+  if (command === "ping") {
+    return message.reply(`🏓 Pong! ${client.ws.ping}ms`);
+  }
+
+  if (command === "ticketpanel") {
+    if (
+      !message.member.permissions.has(
+        PermissionsBitField.Flags.Administrator
+      )
+    ) return;
+
+    const embed = new EmbedBuilder()
+      .setTitle("🎟️ Support Tickets")
+      .setDescription(
+        "Need help? Click the button below.\n\n" +
+        "• One issue per ticket\n" +
+        "• Be respectful\n" +
+        "• Do not ping staff"
+      )
+      .setColor(0x5865f2);
+
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId("open_ticket")
+        .setLabel("Open Ticket")
+        .setStyle(ButtonStyle.Primary)
+    );
+
+    message.channel.send({ embeds: [embed], components: [row] });
+  }
+});
+
+/* ======================
+   BUTTON HANDLER
+====================== */
 
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isButton()) return;
 
-  /* -------- CREATE TICKET -------- */
-  if (interaction.customId === "create_ticket") {
-    const guild = interaction.guild;
-    const user = interaction.user;
-
-    let category = guild.channels.cache.find(
-      c => c.name === TICKET_CATEGORY_NAME && c.type === ChannelType.GuildCategory
+  /* OPEN TICKET */
+  if (interaction.customId === "open_ticket") {
+    const existing = interaction.guild.channels.cache.find(
+      (c) => c.name === `ticket-${interaction.user.id}`
     );
 
-    if (!category) {
-      category = await guild.channels.create({
-        name: TICKET_CATEGORY_NAME,
-        type: ChannelType.GuildCategory
-      });
-    }
-
-    const ticketChannel = await guild.channels.create({
-      name: `ticket-${user.username}`,
-      type: ChannelType.GuildText,
-      parent: category.id,
-      permissionOverwrites: [
-        {
-          id: guild.id,
-          deny: [PermissionsBitField.Flags.ViewChannel]
-        },
-        {
-          id: user.id,
-          allow: [
-            PermissionsBitField.Flags.ViewChannel,
-            PermissionsBitField.Flags.SendMessages,
-            PermissionsBitField.Flags.ReadMessageHistory
-          ]
-        },
-        {
-          id: STAFF_ROLE_ID,
-          allow: [
-            PermissionsBitField.Flags.ViewChannel,
-            PermissionsBitField.Flags.SendMessages,
-            PermissionsBitField.Flags.ReadMessageHistory
-          ]
-        }
-      ]
-    });
-
-    const ticketEmbed = new EmbedBuilder()
-      .setTitle("🎫 Ticket Opened")
-      .setDescription(
-        `Hello <@${user.id}> 👋\n\n` +
-        "Please describe your issue in detail.\n" +
-        "A staff member will be with you shortly."
-      )
-      .setColor(0x2ecc71);
-
-    const closeRow = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId("close_ticket")
-        .setLabel("🔒 Close Ticket")
-        .setStyle(ButtonStyle.Danger)
-    );
-
-    await ticketChannel.send({
-      content: `<@${user.id}>`,
-      embeds: [ticketEmbed],
-      components: [closeRow]
-    });
-
-    await interaction.reply({
-      content: `✅ Ticket created: ${ticketChannel}`,
-      ephemeral: true
-    });
-  }
-
-  /* -------- CLOSE TICKET -------- */
-  if (interaction.customId === "close_ticket") {
-    if (!interaction.member.roles.cache.has(STAFF_ROLE_ID)) {
+    if (existing) {
       return interaction.reply({
-        content: "❌ Only staff can close tickets.",
+        content: "❌ You already have an open ticket.",
         ephemeral: true
       });
     }
 
-    await interaction.reply("🔒 Closing ticket in **5 seconds**...");
+    const channel = await interaction.guild.channels.create({
+      name: `ticket-${interaction.user.id}`,
+      type: ChannelType.GuildText,
+      permissionOverwrites: [
+        {
+          id: interaction.guild.id,
+          deny: [PermissionsBitField.Flags.ViewChannel]
+        },
+        {
+          id: interaction.user.id,
+          allow: [
+            PermissionsBitField.Flags.ViewChannel,
+            PermissionsBitField.Flags.SendMessages,
+            PermissionsBitField.Flags.ReadMessageHistory
+          ]
+        },
+        {
+          id: interaction.guild.roles.everyone.id,
+          deny: [PermissionsBitField.Flags.ViewChannel]
+        }
+      ]
+    });
 
-    setTimeout(() => {
-      interaction.channel.delete().catch(() => {});
-    }, 5000);
+    const embed = new EmbedBuilder()
+      .setTitle("🎫 Ticket Opened")
+      .setDescription(
+        `Hello ${interaction.user},\n\n` +
+        "Please explain your issue.\n" +
+        "An admin will assist you shortly."
+      )
+      .setColor(0x2ecc71);
+
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId("close_ticket")
+        .setLabel("Close Ticket")
+        .setStyle(ButtonStyle.Danger)
+    );
+
+    channel.send({ embeds: [embed], components: [row] });
+
+    interaction.reply({
+      content: `✅ Ticket created: ${channel}`,
+      ephemeral: true
+    });
+  }
+
+  /* CLOSE TICKET */
+  if (interaction.customId === "close_ticket") {
+    if (
+      !interaction.member.permissions.has(
+        PermissionsBitField.Flags.Administrator
+      )
+    ) {
+      return interaction.reply({
+        content: "❌ Only admins can close tickets.",
+        ephemeral: true
+      });
+    }
+
+    await interaction.reply("🔒 Closing ticket...");
+    setTimeout(() => interaction.channel.delete().catch(() => {}), 3000);
   }
 });
 
-/* ================= LOGIN ================= */
+/* ======================
+   LOGIN (RAILWAY)
+====================== */
 
-client.login(BOT_TOKEN);
+client.login(process.env.TOKEN);
