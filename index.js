@@ -1,4 +1,3 @@
-require("dotenv").config();
 const {
   Client,
   GatewayIntentBits,
@@ -22,9 +21,12 @@ const client = new Client({
 
 /* ================= CONFIG ================= */
 
+// ⚠️ REQUIRED
 const TICKET_PANEL_CHANNEL_ID = "1468307494785912862";
-const TICKET_CATEGORY_NAME = "Tickets";
 const STAFF_ROLE_ID = "1468307062747435019";
+
+// Optional
+const TICKET_CATEGORY_NAME = "Tickets";
 
 /* ========================================== */
 
@@ -37,11 +39,11 @@ client.once("ready", async () => {
     .setTitle("🎫 Support Tickets")
     .setDescription(
       "**Need help? You’re in the right place.**\n\n" +
-      "Click the button below to open a private support ticket.\n\n" +
+      "Click the button below to open a private ticket.\n\n" +
       "• One issue per ticket\n" +
-      "• Be clear and respectful\n" +
+      "• Be respectful\n" +
       "• Do NOT ping staff\n\n" +
-      "Our team will assist you shortly 💙"
+      "Our staff will assist you shortly 💙"
     )
     .setColor(0x3498db)
     .setFooter({ text: "Ticket System" });
@@ -56,18 +58,18 @@ client.once("ready", async () => {
   await channel.send({ embeds: [embed], components: [row] });
 });
 
-/* ================= INTERACTIONS ================= */
+/* ================= BUTTON HANDLER ================= */
 
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isButton()) return;
 
-  /* ---------- CREATE TICKET ---------- */
+  /* -------- CREATE TICKET -------- */
   if (interaction.customId === "create_ticket") {
     const guild = interaction.guild;
     const user = interaction.user;
 
     let category = guild.channels.cache.find(
-      (c) => c.name === TICKET_CATEGORY_NAME && c.type === ChannelType.GuildCategory
+      c => c.name === TICKET_CATEGORY_NAME && c.type === ChannelType.GuildCategory
     );
 
     if (!category) {
@@ -106,10 +108,10 @@ client.on("interactionCreate", async (interaction) => {
     });
 
     const ticketEmbed = new EmbedBuilder()
-      .setTitle("🎫 Ticket Created")
+      .setTitle("🎫 Ticket Opened")
       .setDescription(
         `Hello <@${user.id}> 👋\n\n` +
-        "Please explain your issue in detail.\n" +
+        "Please describe your issue in detail.\n" +
         "A staff member will be with you shortly."
       )
       .setColor(0x2ecc71);
@@ -127,17 +129,15 @@ client.on("interactionCreate", async (interaction) => {
       components: [closeRow]
     });
 
-    return interaction.reply({
-      content: `✅ Your ticket has been created: ${ticketChannel}`,
+    await interaction.reply({
+      content: `✅ Ticket created: ${ticketChannel}`,
       ephemeral: true
     });
   }
 
-  /* ---------- CLOSE TICKET ---------- */
+  /* -------- CLOSE TICKET -------- */
   if (interaction.customId === "close_ticket") {
-    if (
-      !interaction.member.roles.cache.has(STAFF_ROLE_ID)
-    ) {
+    if (!interaction.member.roles.cache.has(STAFF_ROLE_ID)) {
       return interaction.reply({
         content: "❌ Only staff can close tickets.",
         ephemeral: true
@@ -154,4 +154,4 @@ client.on("interactionCreate", async (interaction) => {
 
 /* ================= LOGIN ================= */
 
-client.login(process.env.TOKEN);
+client.login(BOT_TOKEN);
