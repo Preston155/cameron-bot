@@ -16,9 +16,10 @@ client.on("messageCreate", (message) => {
   if (message.author.bot) return;
 
   if (message.content === "!ping") {
-    message.reply("🏓 Pong!");
+    message.reply("🏓 Cameron Stink's");
   }
 });
 
 // Railway reads variables from process.env
 client.login(process.env.TOKEN);
+
