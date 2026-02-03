@@ -64,14 +64,19 @@ client.on("messageCreate", async (message) => {
     ) return;
 
     const embed = new EmbedBuilder()
-      .setTitle("🎟️ Support Tickets")
+      .setTitle("🎟️ Support & Assistance Center")
       .setDescription(
-        "Need help? Click the button below.\n\n" +
+        "**Need help or have an issue?** You’re in the right place.\n\n" +
+        "Click **Open Ticket** to create a private support channel where our team can assist you.\n\n" +
+        "**Before opening a ticket:**\n" +
+        "• Clearly explain your issue\n" +
         "• One issue per ticket\n" +
-        "• Be respectful\n" +
-        "• Do not ping staff"
+        "• Remain respectful and patient\n\n" +
+        "⏳ Tickets are handled in the order they are received."
       )
-      .setColor(0x5865f2);
+      .setColor(0x5865f2)
+      .setFooter({ text: "Support System" })
+      .setTimestamp();
 
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
@@ -119,27 +124,36 @@ client.on("interactionCreate", async (interaction) => {
             PermissionsBitField.Flags.SendMessages,
             PermissionsBitField.Flags.ReadMessageHistory
           ]
-        },
-        {
-          id: interaction.guild.roles.everyone.id,
-          deny: [PermissionsBitField.Flags.ViewChannel]
         }
       ]
     });
 
     const embed = new EmbedBuilder()
-      .setTitle("🎫 Ticket Opened")
+      .setTitle("🎫 Ticket Created")
       .setDescription(
-        `Hello ${interaction.user},\n\n` +
-        "Please explain your issue.\n" +
-        "An admin will assist you shortly."
+        `Hello ${interaction.user}, welcome to your support ticket.\n\n` +
+        "Please provide **as much detail as possible** regarding your issue so we can assist you efficiently.\n\n" +
+        "**What happens next?**\n" +
+        "• A staff member will claim this ticket\n" +
+        "• They will assist you until resolved\n" +
+        "• The ticket will then be closed\n\n" +
+        "🔔 Please avoid pinging staff — they will respond soon."
       )
-      .setColor(0x2ecc71);
+      .setColor(0x2ecc71)
+      .setTimestamp();
 
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
+        .setCustomId("claim_ticket")
+        .setLabel("Claim")
+        .setStyle(ButtonStyle.Success),
+      new ButtonBuilder()
+        .setCustomId("unclaim_ticket")
+        .setLabel("Unclaim")
+        .setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder()
         .setCustomId("close_ticket")
-        .setLabel("Close Ticket")
+        .setLabel("Close")
         .setStyle(ButtonStyle.Danger)
     );
 
@@ -149,6 +163,46 @@ client.on("interactionCreate", async (interaction) => {
       content: `✅ Ticket created: ${channel}`,
       ephemeral: true
     });
+  }
+
+  /* CLAIM TICKET */
+  if (interaction.customId === "claim_ticket") {
+    if (
+      !interaction.member.permissions.has(
+        PermissionsBitField.Flags.Administrator
+      )
+    ) {
+      return interaction.reply({
+        content: "❌ Only admins can claim tickets.",
+        ephemeral: true
+      });
+    }
+
+    interaction.channel.send(
+      `🟢 **Ticket claimed by ${interaction.user}**`
+    );
+
+    interaction.reply({ content: "Ticket claimed.", ephemeral: true });
+  }
+
+  /* UNCLAIM TICKET */
+  if (interaction.customId === "unclaim_ticket") {
+    if (
+      !interaction.member.permissions.has(
+        PermissionsBitField.Flags.Administrator
+      )
+    ) {
+      return interaction.reply({
+        content: "❌ Only admins can unclaim tickets.",
+        ephemeral: true
+      });
+    }
+
+    interaction.channel.send(
+      `🟡 **Ticket is now unclaimed**`
+    );
+
+    interaction.reply({ content: "Ticket unclaimed.", ephemeral: true });
   }
 
   /* CLOSE TICKET */
