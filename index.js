@@ -11,6 +11,13 @@ const {
 } = require("discord.js");
 
 /* ======================
+   CONFIG
+====================== */
+
+const PREFIX = "!";
+const TICKET_CATEGORY_ID = "1466903166670082210"; // 👈 ADD CATEGORY ID
+
+/* ======================
    CLIENT
 ====================== */
 
@@ -40,8 +47,6 @@ client.once("ready", () => {
 /* ======================
    PREFIX COMMANDS
 ====================== */
-
-const PREFIX = "!";
 
 client.on("messageCreate", async (message) => {
   if (message.author.bot || !message.guild) return;
@@ -112,6 +117,7 @@ client.on("interactionCreate", async (interaction) => {
     const channel = await interaction.guild.channels.create({
       name: `ticket-${interaction.user.id}`,
       type: ChannelType.GuildText,
+      parent: TICKET_CATEGORY_ID || null, // ✅ CATEGORY SUPPORT
       permissionOverwrites: [
         {
           id: interaction.guild.id,
@@ -198,10 +204,7 @@ client.on("interactionCreate", async (interaction) => {
       });
     }
 
-    interaction.channel.send(
-      `🟡 **Ticket is now unclaimed**`
-    );
-
+    interaction.channel.send(`🟡 **Ticket is now unclaimed**`);
     interaction.reply({ content: "Ticket unclaimed.", ephemeral: true });
   }
 
