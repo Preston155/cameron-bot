@@ -15,7 +15,8 @@ const {
 ====================== */
 
 const PREFIX = "!";
-const TICKET_CATEGORY_ID = "1466903166670082210"; // 👈 ADD CATEGORY ID
+const TICKET_CATEGORY_ID = "1466903166670082210"; // ✅ Ticket category
+const STAFF_ROLE_ID = "1468307062747435019";      // ✅ Staff role to ping
 
 /* ======================
    CLIENT
@@ -101,7 +102,7 @@ client.on("messageCreate", async (message) => {
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isButton()) return;
 
-  /* OPEN TICKET */
+  /* ===== OPEN TICKET ===== */
   if (interaction.customId === "open_ticket") {
     const existing = interaction.guild.channels.cache.find(
       (c) => c.name === `ticket-${interaction.user.id}`
@@ -117,7 +118,7 @@ client.on("interactionCreate", async (interaction) => {
     const channel = await interaction.guild.channels.create({
       name: `ticket-${interaction.user.id}`,
       type: ChannelType.GuildText,
-      parent: TICKET_CATEGORY_ID || null, // ✅ CATEGORY SUPPORT
+      parent: TICKET_CATEGORY_ID,
       permissionOverwrites: [
         {
           id: interaction.guild.id,
@@ -130,9 +131,25 @@ client.on("interactionCreate", async (interaction) => {
             PermissionsBitField.Flags.SendMessages,
             PermissionsBitField.Flags.ReadMessageHistory
           ]
+        },
+        {
+          id: STAFF_ROLE_ID,
+          allow: [
+            PermissionsBitField.Flags.ViewChannel,
+            PermissionsBitField.Flags.SendMessages,
+            PermissionsBitField.Flags.ReadMessageHistory
+          ]
         }
       ]
     });
+
+    // 🔔 Ping ticket creator + staff
+    const ping = await channel.send(
+      `<@${interaction.user.id}> <@&${STAFF_ROLE_ID}>`
+    );
+
+    // 🧹 Auto-delete ping
+    setTimeout(() => ping.delete().catch(() => {}), 5000);
 
     const embed = new EmbedBuilder()
       .setTitle("🎫 Ticket Created")
@@ -171,54 +188,30 @@ client.on("interactionCreate", async (interaction) => {
     });
   }
 
-  /* CLAIM TICKET */
+  /* ===== CLAIM ===== */
   if (interaction.customId === "claim_ticket") {
-    if (
-      !interaction.member.permissions.has(
-        PermissionsBitField.Flags.Administrator
-      )
-    ) {
-      return interaction.reply({
-        content: "❌ Only admins can claim tickets.",
-        ephemeral: true
-      });
+    if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+      return interaction.reply({ content: "❌ Only admins can claim tickets.", ephemeral: true });
     }
 
-    interaction.channel.send(
-      `🟢 **Ticket claimed by ${interaction.user}**`
-    );
-
+    interaction.channel.send(`🟢 **Ticket claimed by ${interaction.user}**`);
     interaction.reply({ content: "Ticket claimed.", ephemeral: true });
   }
 
-  /* UNCLAIM TICKET */
+  /* ===== UNCLAIM ===== */
   if (interaction.customId === "unclaim_ticket") {
-    if (
-      !interaction.member.permissions.has(
-        PermissionsBitField.Flags.Administrator
-      )
-    ) {
-      return interaction.reply({
-        content: "❌ Only admins can unclaim tickets.",
-        ephemeral: true
-      });
+    if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+      return interaction.reply({ content: "❌ Only admins can unclaim tickets.", ephemeral: true });
     }
 
-    interaction.channel.send(`🟡 **Ticket is now unclaimed**`);
+    interaction.channel.send("🟡 **Ticket is now unclaimed**");
     interaction.reply({ content: "Ticket unclaimed.", ephemeral: true });
   }
 
-  /* CLOSE TICKET */
+  /* ===== CLOSE ===== */
   if (interaction.customId === "close_ticket") {
-    if (
-      !interaction.member.permissions.has(
-        PermissionsBitField.Flags.Administrator
-      )
-    ) {
-      return interaction.reply({
-        content: "❌ Only admins can close tickets.",
-        ephemeral: true
-      });
+    if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+      return interaction.reply({ content: "❌ Only admins can close tickets.", ephemeral: true });
     }
 
     await interaction.reply("🔒 Closing ticket...");
